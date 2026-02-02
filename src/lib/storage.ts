@@ -1,4 +1,4 @@
-import { Transaction, Category, FinancialGoal, SavingsGoal, UserSettings, DEFAULT_CATEGORIES } from '@/types/finance';
+import { Transaction, Category, FinancialGoal, SavingsGoal, UserSettings, DEFAULT_CATEGORIES, IncomeSource, Wallet, WalletTransaction, DEFAULT_WALLETS } from '@/types/finance';
 
 const STORAGE_KEYS = {
   TRANSACTIONS: 'slx_transactions',
@@ -6,6 +6,9 @@ const STORAGE_KEYS = {
   GOALS: 'slx_goals',
   SAVINGS_GOALS: 'slx_savings_goals',
   SETTINGS: 'slx_settings',
+  INCOME_SOURCES: 'slx_income_sources',
+  WALLETS: 'slx_wallets',
+  WALLET_TRANSACTIONS: 'slx_wallet_transactions',
 };
 
 // Generic storage functions
@@ -155,6 +158,74 @@ export function deleteSavingsGoal(id: string): SavingsGoal[] {
   return goals;
 }
 
+// Income Sources
+export function getIncomeSources(): IncomeSource[] {
+  return getItem(STORAGE_KEYS.INCOME_SOURCES, []);
+}
+
+export function saveIncomeSources(sources: IncomeSource[]): void {
+  setItem(STORAGE_KEYS.INCOME_SOURCES, sources);
+}
+
+export function addIncomeSource(source: IncomeSource): IncomeSource[] {
+  const sources = getIncomeSources();
+  sources.push(source);
+  saveIncomeSources(sources);
+  return sources;
+}
+
+export function updateIncomeSource(id: string, updates: Partial<IncomeSource>): IncomeSource[] {
+  const sources = getIncomeSources();
+  const index = sources.findIndex(s => s.id === id);
+  if (index !== -1) {
+    sources[index] = { ...sources[index], ...updates };
+    saveIncomeSources(sources);
+  }
+  return sources;
+}
+
+export function deleteIncomeSource(id: string): IncomeSource[] {
+  const sources = getIncomeSources().filter(s => s.id !== id);
+  saveIncomeSources(sources);
+  return sources;
+}
+
+// Wallets
+export function getWallets(): Wallet[] {
+  const saved = getItem<Wallet[]>(STORAGE_KEYS.WALLETS, []);
+  return saved.length > 0 ? saved : DEFAULT_WALLETS;
+}
+
+export function saveWallets(wallets: Wallet[]): void {
+  setItem(STORAGE_KEYS.WALLETS, wallets);
+}
+
+export function updateWallet(id: string, updates: Partial<Wallet>): Wallet[] {
+  const wallets = getWallets();
+  const index = wallets.findIndex(w => w.id === id);
+  if (index !== -1) {
+    wallets[index] = { ...wallets[index], ...updates };
+    saveWallets(wallets);
+  }
+  return wallets;
+}
+
+// Wallet Transactions
+export function getWalletTransactions(): WalletTransaction[] {
+  return getItem(STORAGE_KEYS.WALLET_TRANSACTIONS, []);
+}
+
+export function saveWalletTransactions(transactions: WalletTransaction[]): void {
+  setItem(STORAGE_KEYS.WALLET_TRANSACTIONS, transactions);
+}
+
+export function addWalletTransaction(transaction: WalletTransaction): WalletTransaction[] {
+  const transactions = getWalletTransactions();
+  transactions.unshift(transaction);
+  saveWalletTransactions(transactions);
+  return transactions;
+}
+
 // User Settings
 export function getSettings(): UserSettings {
   return getItem(STORAGE_KEYS.SETTINGS, {
@@ -175,6 +246,9 @@ export function exportAllData(): string {
     categories: getCategories(),
     goals: getFinancialGoals(),
     savingsGoals: getSavingsGoals(),
+    incomeSources: getIncomeSources(),
+    wallets: getWallets(),
+    walletTransactions: getWalletTransactions(),
     settings: getSettings(),
     exportedAt: new Date().toISOString(),
   };
@@ -188,6 +262,9 @@ export function importAllData(jsonString: string): boolean {
     if (data.categories) saveCategories(data.categories);
     if (data.goals) saveFinancialGoals(data.goals);
     if (data.savingsGoals) saveSavingsGoals(data.savingsGoals);
+    if (data.incomeSources) saveIncomeSources(data.incomeSources);
+    if (data.wallets) saveWallets(data.wallets);
+    if (data.walletTransactions) saveWalletTransactions(data.walletTransactions);
     if (data.settings) saveSettings(data.settings);
     return true;
   } catch {

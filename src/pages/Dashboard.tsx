@@ -4,12 +4,13 @@ import { useFinance } from '@/context/FinanceContext';
 import { SummaryCard } from '@/components/finance/SummaryCard';
 import { MonthSelector } from '@/components/finance/MonthSelector';
 import { ExpenseChart } from '@/components/finance/ExpenseChart';
+import { IncomeBreakdownChart } from '@/components/finance/IncomeBreakdownChart';
 import { TransactionItem } from '@/components/finance/TransactionItem';
 import { AddTransactionDialog } from '@/components/finance/AddTransactionDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
-import { parseISO, format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
 export default function Dashboard() {
   const { transactions, categories, monthlyStats, formatCurrency, currentMonth } = useFinance();
@@ -37,19 +38,19 @@ export default function Dashboard() {
       {/* Summary Cards */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <SummaryCard
-          title="Receitas"
+          title="Entradas"
           value={formatCurrency(monthlyStats.totalIncome)}
           icon={TrendingUp}
           variant="income"
         />
         <SummaryCard
-          title="Despesas"
+          title="Saídas"
           value={formatCurrency(monthlyStats.totalExpenses)}
           icon={TrendingDown}
           variant="expense"
         />
         <SummaryCard
-          title="Saldo"
+          title="Lucro Líquido"
           value={formatCurrency(monthlyStats.netProfit)}
           icon={Wallet}
           variant="profit"
@@ -59,43 +60,53 @@ export default function Dashboard() {
 
       {/* Charts Section */}
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
+        {/* Income Breakdown Chart - Where you earned more */}
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg text-income">De Onde Veio Seu Lucro</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <IncomeBreakdownChart />
+          </CardContent>
+        </Card>
+
         {/* Expense Chart */}
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-lg">Onde Você Gastou Mais</CardTitle>
+            <CardTitle className="text-lg text-expense">Onde Você Gastou Mais</CardTitle>
           </CardHeader>
           <CardContent>
             <ExpenseChart />
           </CardContent>
         </Card>
-
-        {/* Quick Stats */}
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg">Resumo do Mês</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg bg-muted p-4">
-              <span className="text-muted-foreground">Total de Transações</span>
-              <span className="text-xl font-bold">{recentTransactions.length}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg bg-muted p-4">
-              <span className="text-muted-foreground">Investimentos</span>
-              <span className="text-xl font-bold text-investment">
-                {formatCurrency(monthlyStats.totalInvestments)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg bg-muted p-4">
-              <span className="text-muted-foreground">Taxa de Economia</span>
-              <span className="text-xl font-bold text-primary">
-                {monthlyStats.totalIncome > 0
-                  ? ((monthlyStats.netProfit / monthlyStats.totalIncome) * 100).toFixed(1)
-                  : 0}%
-              </span>
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      {/* Quick Stats */}
+      <Card className="mb-6 border-border bg-card">
+        <CardHeader>
+          <CardTitle className="text-lg">Resumo do Mês</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-3">
+          <div className="flex items-center justify-between rounded-lg bg-muted p-4">
+            <span className="text-muted-foreground">Total de Transações</span>
+            <span className="text-xl font-bold">{recentTransactions.length}</span>
+          </div>
+          <div className="flex items-center justify-between rounded-lg bg-muted p-4">
+            <span className="text-muted-foreground">Investimentos</span>
+            <span className="text-xl font-bold text-investment">
+              {formatCurrency(monthlyStats.totalInvestments)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between rounded-lg bg-muted p-4">
+            <span className="text-muted-foreground">Taxa de Economia</span>
+            <span className="text-xl font-bold text-primary">
+              {monthlyStats.totalIncome > 0
+                ? ((monthlyStats.netProfit / monthlyStats.totalIncome) * 100).toFixed(1)
+                : 0}%
+            </span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent Transactions */}
       <Card className="border-border bg-card">

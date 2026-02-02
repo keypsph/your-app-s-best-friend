@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Menu, X, LayoutDashboard, Receipt, FolderOpen, Target, PiggyBank, TrendingUp, Settings } from 'lucide-react';
+import { Menu, LayoutDashboard, Receipt, FolderOpen, Target, PiggyBank, TrendingUp, Settings, Calendar, Percent } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { PrivacyToggle } from './PrivacyToggle';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -12,6 +13,8 @@ const navItems = [
   { path: '/goals', label: 'Metas', icon: Target },
   { path: '/savings', label: 'Poupança', icon: PiggyBank },
   { path: '/investments', label: 'Investimentos', icon: TrendingUp },
+  { path: '/annual', label: 'Resumo Anual', icon: Calendar },
+  { path: '/distribution', label: 'Divisão de Renda', icon: Percent },
   { path: '/settings', label: 'Configurações', icon: Settings },
 ];
 
@@ -59,7 +62,10 @@ export function MainLayout() {
       <div className="flex flex-1 flex-col">
         {/* Mobile Header */}
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-lg lg:hidden">
-          <h1 className="gradient-text text-xl font-bold">SLX Finance</h1>
+          <div className="flex items-center gap-2">
+            <PrivacyToggle />
+            <h1 className="gradient-text text-xl font-bold">SLX Finance</h1>
+          </div>
           
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetTrigger asChild>
@@ -71,6 +77,12 @@ export function MainLayout() {
               <NavContent />
             </SheetContent>
           </Sheet>
+        </header>
+
+        {/* Desktop Header with Privacy Toggle */}
+        <header className="sticky top-0 z-40 hidden h-16 items-center border-b border-border bg-background/80 px-6 backdrop-blur-lg lg:flex">
+          <PrivacyToggle />
+          <span className="ml-2 text-sm text-muted-foreground">Clique para esconder/mostrar valores</span>
         </header>
 
         {/* Main Content */}
