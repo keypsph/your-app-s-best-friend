@@ -12,6 +12,8 @@ import Goals from "./pages/Goals";
 import Savings from "./pages/Savings";
 import Investments from "./pages/Investments";
 import Settings from "./pages/Settings";
+import AnnualSummary from "./pages/AnnualSummary";
+import IncomeDistribution from "./pages/IncomeDistribution";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +33,8 @@ const App = () => (
               <Route path="/goals" element={<Goals />} />
               <Route path="/savings" element={<Savings />} />
               <Route path="/investments" element={<Investments />} />
+              <Route path="/annual" element={<AnnualSummary />} />
+              <Route path="/distribution" element={<IncomeDistribution />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />

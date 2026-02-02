@@ -6,6 +6,9 @@ import {
   SavingsGoal,
   UserSettings,
   MonthlyStats,
+  IncomeSource,
+  Wallet,
+  WalletTransaction,
 } from '@/types/finance';
 import * as storage from '@/lib/storage';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
@@ -17,6 +20,9 @@ interface FinanceContextType {
   financialGoals: FinancialGoal[];
   savingsGoals: SavingsGoal[];
   settings: UserSettings;
+  incomeSources: IncomeSource[];
+  wallets: Wallet[];
+  walletTransactions: WalletTransaction[];
   
   // Current month filter
   currentMonth: string;
@@ -46,6 +52,14 @@ interface FinanceContextType {
   updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => void;
   deleteSavingsGoal: (id: string) => void;
   
+  // Income source actions
+  addIncomeSource: (source: Omit<IncomeSource, 'id'>) => void;
+  updateIncomeSource: (id: string, updates: Partial<IncomeSource>) => void;
+  deleteIncomeSource: (id: string) => void;
+  
+  // Wallet actions
+  addWalletTransaction: (transaction: Omit<WalletTransaction, 'id'>) => void;
+  
   // Settings
   updateSettings: (settings: Partial<UserSettings>) => void;
   
@@ -63,6 +77,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
   const [settings, setSettings] = useState<UserSettings>(storage.getSettings());
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
 
   const refreshData = useCallback(() => {
     setTransactions(storage.getTransactions());
@@ -70,6 +87,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setFinancialGoals(storage.getFinancialGoals());
     setSavingsGoals(storage.getSavingsGoals());
     setSettings(storage.getSettings());
+    setIncomeSources(storage.getIncomeSources());
+    setWallets(storage.getWallets());
+    setWalletTransactions(storage.getWalletTransactions());
   }, []);
 
   useEffect(() => {
@@ -121,12 +141,29 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }))
       .sort((a, b) => b.amount - a.amount);
     
+    // Income breakdown by category
+    const incomeByCategory = monthTransactions
+      .filter(t => t.type === 'income')
+      .reduce((acc, t) => {
+        acc[t.categoryId] = (acc[t.categoryId] || 0) + t.amount;
+        return acc;
+      }, {} as Record<string, number>);
+    
+    const incomeBreakdown = Object.entries(incomeByCategory)
+      .map(([categoryId, amount]) => ({
+        categoryId,
+        amount,
+        percentage: totalIncome > 0 ? (amount / totalIncome) * 100 : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+    
     return {
       totalIncome,
       totalExpenses,
       totalInvestments,
       netProfit,
       categoryBreakdown,
+      incomeBreakdown,
     };
   }, [transactions, currentMonth]);
 
@@ -147,7 +184,18 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     };
     const updated = storage.addTransaction(transaction);
     setTransactions(updated);
-  }, []);
+    
+    // If there's a savings contribution, update the savings goal
+    if (data.savingsGoalId && data.savingsContribution && data.savingsContribution > 0) {
+      const goal = savingsGoals.find(g => g.id === data.savingsGoalId);
+      if (goal) {
+        const updatedGoals = storage.updateSavingsGoal(data.savingsGoalId, {
+          currentAmount: goal.currentAmount + data.savingsContribution,
+        });
+        setSavingsGoals(updatedGoals);
+      }
+    }
+  }, [savingsGoals]);
 
   const updateTransactionHandler = useCallback((id: string, updates: Partial<Transaction>) => {
     const updated = storage.updateTransaction(id, updates);
@@ -220,6 +268,36 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setSavingsGoals(updated);
   }, []);
 
+  // Income source actions
+  const addIncomeSourceHandler = useCallback((data: Omit<IncomeSource, 'id'>) => {
+    const source: IncomeSource = {
+      ...data,
+      id: crypto.randomUUID(),
+    };
+    const updated = storage.addIncomeSource(source);
+    setIncomeSources(updated);
+  }, []);
+
+  const updateIncomeSourceHandler = useCallback((id: string, updates: Partial<IncomeSource>) => {
+    const updated = storage.updateIncomeSource(id, updates);
+    setIncomeSources(updated);
+  }, []);
+
+  const deleteIncomeSourceHandler = useCallback((id: string) => {
+    const updated = storage.deleteIncomeSource(id);
+    setIncomeSources(updated);
+  }, []);
+
+  // Wallet transaction actions
+  const addWalletTransactionHandler = useCallback((data: Omit<WalletTransaction, 'id'>) => {
+    const transaction: WalletTransaction = {
+      ...data,
+      id: crypto.randomUUID(),
+    };
+    const updated = storage.addWalletTransaction(transaction);
+    setWalletTransactions(updated);
+  }, []);
+
   // Settings
   const updateSettingsHandler = useCallback((updates: Partial<UserSettings>) => {
     const updated = { ...settings, ...updates };
@@ -238,6 +316,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         currentMonth,
         setCurrentMonth,
         monthlyStats,
+        incomeSources,
+        wallets,
+        walletTransactions,
         addTransaction: addTransactionHandler,
         updateTransaction: updateTransactionHandler,
         deleteTransaction: deleteTransactionHandler,
@@ -251,6 +332,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         addSavingsGoal: addSavingsGoalHandler,
         updateSavingsGoal: updateSavingsGoalHandler,
         deleteSavingsGoal: deleteSavingsGoalHandler,
+        addIncomeSource: addIncomeSourceHandler,
+        updateIncomeSource: updateIncomeSourceHandler,
+        deleteIncomeSource: deleteIncomeSourceHandler,
+        addWalletTransaction: addWalletTransactionHandler,
         updateSettings: updateSettingsHandler,
         formatCurrency,
         refreshData,
