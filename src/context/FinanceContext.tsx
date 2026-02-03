@@ -58,6 +58,9 @@ interface FinanceContextType {
   deleteIncomeSource: (id: string) => void;
   
   // Wallet actions
+  addWallet: (wallet: Omit<Wallet, 'id'>) => void;
+  updateWallet: (id: string, updates: Partial<Wallet>) => void;
+  deleteWallet: (id: string) => void;
   addWalletTransaction: (transaction: Omit<WalletTransaction, 'id'>) => void;
   
   // Settings
@@ -288,6 +291,26 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setIncomeSources(updated);
   }, []);
 
+  // Wallet actions
+  const addWalletHandler = useCallback((data: Omit<Wallet, 'id'>) => {
+    const wallet: Wallet = {
+      ...data,
+      id: crypto.randomUUID(),
+    };
+    const updated = storage.addWallet(wallet);
+    setWallets(updated);
+  }, []);
+
+  const updateWalletHandler = useCallback((id: string, updates: Partial<Wallet>) => {
+    const updated = storage.updateWallet(id, updates);
+    setWallets(updated);
+  }, []);
+
+  const deleteWalletHandler = useCallback((id: string) => {
+    const updated = storage.deleteWallet(id);
+    setWallets(updated);
+  }, []);
+
   // Wallet transaction actions
   const addWalletTransactionHandler = useCallback((data: Omit<WalletTransaction, 'id'>) => {
     const transaction: WalletTransaction = {
@@ -335,6 +358,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         addIncomeSource: addIncomeSourceHandler,
         updateIncomeSource: updateIncomeSourceHandler,
         deleteIncomeSource: deleteIncomeSourceHandler,
+        addWallet: addWalletHandler,
+        updateWallet: updateWalletHandler,
+        deleteWallet: deleteWalletHandler,
         addWalletTransaction: addWalletTransactionHandler,
         updateSettings: updateSettingsHandler,
         formatCurrency,

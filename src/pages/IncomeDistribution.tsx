@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Settings2, Megaphone, Cpu, Wallet, TrendingUp, Calculator } from 'lucide-react';
+import { Plus, Trash2, Settings2, Calculator, Palette } from 'lucide-react';
 import { useFinance } from '@/context/FinanceContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { DynamicIcon } from '@/components/finance/DynamicIcon';
-import { parseISO, format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { Wallet } from '@/types/finance';
+
+const ICON_OPTIONS = [
+  'Megaphone', 'Cpu', 'Wallet', 'PiggyBank', 'CreditCard', 'DollarSign',
+  'Building', 'Briefcase', 'Target', 'TrendingUp', 'ShoppingBag', 'Gift',
+  'Car', 'Home', 'Heart', 'Star', 'Zap', 'Shield'
+];
+
+const COLOR_OPTIONS = [
+  '#F97316', '#3B82F6', '#10B981', '#8B5CF6', '#EC4899', '#EF4444',
+  '#F59E0B', '#06B6D4', '#6366F1', '#84CC16', '#14B8A6', '#A855F7'
+];
 
 export default function IncomeDistribution() {
   const {
@@ -25,19 +37,25 @@ export default function IncomeDistribution() {
     addIncomeSource,
     updateIncomeSource,
     deleteIncomeSource,
+    addWallet,
+    updateWallet,
+    deleteWallet,
     formatCurrency,
     currentMonth,
   } = useFinance();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [walletDialogOpen, setWalletDialogOpen] = useState(false);
   const [editingSource, setEditingSource] = useState<string | null>(null);
+  const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    distributions: [
-      { walletId: 'marketing', percentage: 30 },
-      { walletId: 'equipment', percentage: 20 },
-      { walletId: 'free_profit', percentage: 50 },
-    ],
+    distributions: wallets.map(w => ({ walletId: w.id, percentage: 0 })),
+  });
+  const [walletFormData, setWalletFormData] = useState({
+    name: '',
+    icon: 'Wallet',
+    color: '#10B981',
   });
 
   const monthDate = parseISO(`${currentMonth}-01`);
@@ -75,7 +93,6 @@ export default function IncomeDistribution() {
       return isWithinInterval(date, { start: monthStart, end: monthEnd });
     });
 
-    // Digital income (find categories with 'digital' or 'streaming' in id)
     const digitalIncomeCategories = categories.filter(c =>
       c.type === 'income' && (c.id.includes('digital') || c.id.includes('streaming'))
     );
@@ -83,7 +100,6 @@ export default function IncomeDistribution() {
       .filter(t => t.type === 'income' && digitalIncomeCategories.some(c => c.id === t.categoryId))
       .reduce((sum, t) => sum + t.amount, 0);
 
-    // Marketing expenses
     const marketingExpenses = monthTx
       .filter(t => t.type === 'expense' && t.categoryId === 'marketing')
       .reduce((sum, t) => sum + t.amount, 0);
@@ -97,37 +113,83 @@ export default function IncomeDistribution() {
     e.preventDefault();
     if (!formData.name) return;
 
-    const totalPercentage = formData.distributions.reduce((sum, d) => sum + d.percentage, 0);
+    const activeDistributions = formData.distributions.filter(d => d.percentage > 0);
+    const totalPercentage = activeDistributions.reduce((sum, d) => sum + d.percentage, 0);
+
     if (totalPercentage !== 100) {
       alert('As porcentagens devem somar 100%');
       return;
     }
 
     if (editingSource) {
-      updateIncomeSource(editingSource, formData);
+      updateIncomeSource(editingSource, { name: formData.name, distributions: activeDistributions });
     } else {
-      addIncomeSource(formData);
+      addIncomeSource({ name: formData.name, distributions: activeDistributions });
     }
 
+    resetForm();
+    setDialogOpen(false);
+  };
+
+  const handleWalletSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!walletFormData.name) return;
+
+    if (editingWallet) {
+      updateWallet(editingWallet.id, walletFormData);
+    } else {
+      addWallet({ ...walletFormData, balance: 0 });
+    }
+
+    setWalletFormData({ name: '', icon: 'Wallet', color: '#10B981' });
+    setEditingWallet(null);
+    setWalletDialogOpen(false);
+  };
+
+  const resetForm = () => {
     setFormData({
       name: '',
-      distributions: [
-        { walletId: 'marketing', percentage: 30 },
-        { walletId: 'equipment', percentage: 20 },
-        { walletId: 'free_profit', percentage: 50 },
-      ],
+      distributions: wallets.map(w => ({ walletId: w.id, percentage: 0 })),
     });
     setEditingSource(null);
-    setDialogOpen(false);
   };
 
   const openEditDialog = (source: typeof incomeSources[0]) => {
     setEditingSource(source.id);
+    const distributions = wallets.map(w => {
+      const existing = source.distributions.find(d => d.walletId === w.id);
+      return { walletId: w.id, percentage: existing?.percentage || 0 };
+    });
     setFormData({
       name: source.name,
-      distributions: source.distributions,
+      distributions,
     });
     setDialogOpen(true);
+  };
+
+  const openNewSourceDialog = () => {
+    resetForm();
+    setFormData({
+      name: '',
+      distributions: wallets.map(w => ({ walletId: w.id, percentage: 0 })),
+    });
+    setDialogOpen(true);
+  };
+
+  const openEditWalletDialog = (wallet: Wallet) => {
+    setEditingWallet(wallet);
+    setWalletFormData({
+      name: wallet.name,
+      icon: wallet.icon,
+      color: wallet.color,
+    });
+    setWalletDialogOpen(true);
+  };
+
+  const openNewWalletDialog = () => {
+    setEditingWallet(null);
+    setWalletFormData({ name: '', icon: 'Wallet', color: '#10B981' });
+    setWalletDialogOpen(true);
   };
 
   const updateDistribution = (walletId: string, percentage: number) => {
@@ -139,14 +201,6 @@ export default function IncomeDistribution() {
     }));
   };
 
-  const getWalletIcon = (walletId: string) => {
-    switch (walletId) {
-      case 'marketing': return Megaphone;
-      case 'equipment': return Cpu;
-      default: return Wallet;
-    }
-  };
-
   return (
     <div className="safe-top safe-bottom min-h-full p-4 pb-24 lg:p-6">
       {/* Header */}
@@ -155,18 +209,7 @@ export default function IncomeDistribution() {
           <h1 className="text-2xl font-bold">Divisão de Renda</h1>
           <p className="text-muted-foreground">Configure como sua renda é distribuída</p>
         </div>
-        <Button onClick={() => {
-          setEditingSource(null);
-          setFormData({
-            name: '',
-            distributions: [
-              { walletId: 'marketing', percentage: 30 },
-              { walletId: 'equipment', percentage: 20 },
-              { walletId: 'free_profit', percentage: 50 },
-            ],
-          });
-          setDialogOpen(true);
-        }}>
+        <Button onClick={openNewSourceDialog}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Fonte
         </Button>
@@ -203,57 +246,126 @@ export default function IncomeDistribution() {
         </Card>
       )}
 
-      {/* Wallet Balances */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        {walletStats.map(wallet => {
-          const Icon = getWalletIcon(wallet.id);
-          const usagePercentage = wallet.monthlyCredits > 0
-            ? (wallet.monthlyDebits / wallet.monthlyCredits) * 100
-            : 0;
-
-          return (
-            <Card key={wallet.id} className="border-border bg-card">
-              <CardContent className="p-5">
+      {/* Wallet Categories Section */}
+      <Card className="mb-6 border-border bg-card">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Palette className="h-5 w-5" />
+            Categorias de Carteira
+          </CardTitle>
+          <Button size="sm" onClick={openNewWalletDialog}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Carteira
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {wallets.map(wallet => (
+              <div
+                key={wallet.id}
+                className="flex items-center justify-between rounded-lg border border-border p-3"
+              >
                 <div className="flex items-center gap-3">
                   <div
-                    className="flex h-12 w-12 items-center justify-center rounded-xl"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg"
                     style={{ backgroundColor: `${wallet.color}20` }}
                   >
-                    <Icon className="h-6 w-6" style={{ color: wallet.color }} />
+                    <DynamicIcon
+                      name={wallet.icon}
+                      className="h-5 w-5"
+                      style={{ color: wallet.color }}
+                    />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{wallet.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Recebido: {formatCurrency(wallet.monthlyCredits)}
-                    </p>
-                  </div>
+                  <span className="font-medium">{wallet.name}</span>
                 </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEditWalletDialog(wallet)}
+                  >
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive"
+                    onClick={() => {
+                      if (confirm(`Excluir carteira "${wallet.name}"?`)) {
+                        deleteWallet(wallet.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {wallets.length === 0 && (
+            <p className="py-4 text-center text-muted-foreground">
+              Nenhuma carteira criada. Crie uma para começar!
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
-                <div className="mt-4">
-                  <div className="mb-2 flex justify-between text-sm">
-                    <span className="text-muted-foreground">Usado: {formatCurrency(wallet.monthlyDebits)}</span>
-                    <span className="font-semibold" style={{ color: wallet.color }}>
-                      {usagePercentage.toFixed(0)}%
+      {/* Wallet Balances */}
+      {walletStats.length > 0 && (
+        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {walletStats.map(wallet => {
+            const usagePercentage = wallet.monthlyCredits > 0
+              ? (wallet.monthlyDebits / wallet.monthlyCredits) * 100
+              : 0;
+
+            return (
+              <Card key={wallet.id} className="border-border bg-card">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="flex h-12 w-12 items-center justify-center rounded-xl"
+                      style={{ backgroundColor: `${wallet.color}20` }}
+                    >
+                      <DynamicIcon
+                        name={wallet.icon}
+                        className="h-6 w-6"
+                        style={{ color: wallet.color }}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold">{wallet.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Recebido: {formatCurrency(wallet.monthlyCredits)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="mb-2 flex justify-between text-sm">
+                      <span className="text-muted-foreground">Usado: {formatCurrency(wallet.monthlyDebits)}</span>
+                      <span className="font-semibold" style={{ color: wallet.color }}>
+                        {usagePercentage.toFixed(0)}%
+                      </span>
+                    </div>
+                    <Progress
+                      value={Math.min(usagePercentage, 100)}
+                      className="h-2"
+                      style={{ '--progress-color': wallet.color } as React.CSSProperties}
+                    />
+                  </div>
+
+                  <div className="mt-3 flex justify-between rounded-lg bg-muted/50 p-3">
+                    <span className="text-sm text-muted-foreground">Saldo Restante</span>
+                    <span className="font-bold" style={{ color: wallet.color }}>
+                      {formatCurrency(wallet.monthlyBalance)}
                     </span>
                   </div>
-                  <Progress
-                    value={Math.min(usagePercentage, 100)}
-                    className="h-2"
-                    style={{ '--progress-color': wallet.color } as React.CSSProperties}
-                  />
-                </div>
-
-                <div className="mt-3 flex justify-between rounded-lg bg-muted/50 p-3">
-                  <span className="text-sm text-muted-foreground">Saldo Restante</span>
-                  <span className="font-bold" style={{ color: wallet.color }}>
-                    {formatCurrency(wallet.monthlyBalance)}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* Income Sources */}
       <Card className="border-border bg-card">
@@ -288,13 +400,14 @@ export default function IncomeDistribution() {
                   <div className="grid gap-2 sm:grid-cols-3">
                     {source.distributions.map(dist => {
                       const wallet = wallets.find(w => w.id === dist.walletId);
+                      if (!wallet) return null;
                       return (
                         <div
                           key={dist.walletId}
                           className="flex items-center justify-between rounded-lg bg-muted/50 p-2"
                         >
-                          <span className="text-sm">{wallet?.name}</span>
-                          <span className="font-semibold" style={{ color: wallet?.color }}>
+                          <span className="text-sm">{wallet.name}</span>
+                          <span className="font-semibold" style={{ color: wallet.color }}>
                             {dist.percentage}%
                           </span>
                         </div>
@@ -308,7 +421,7 @@ export default function IncomeDistribution() {
             <div className="py-8 text-center">
               <Settings2 className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
               <p className="text-muted-foreground">Nenhuma fonte de renda configurada</p>
-              <Button className="mt-4" onClick={() => setDialogOpen(true)}>
+              <Button className="mt-4" onClick={openNewSourceDialog}>
                 <Plus className="mr-2 h-4 w-4" />
                 Criar Primeira Fonte
               </Button>
@@ -317,7 +430,7 @@ export default function IncomeDistribution() {
         </CardContent>
       </Card>
 
-      {/* Dialog */}
+      {/* Income Source Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -373,6 +486,87 @@ export default function IncomeDistribution() {
 
             <Button type="submit" className="w-full">
               {editingSource ? 'Salvar Alterações' : 'Criar Fonte'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Wallet Dialog */}
+      <Dialog open={walletDialogOpen} onOpenChange={setWalletDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingWallet ? 'Editar Carteira' : 'Nova Carteira'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleWalletSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="walletName">Nome da Carteira</Label>
+              <Input
+                id="walletName"
+                placeholder="Ex: Investimentos"
+                value={walletFormData.name}
+                onChange={(e) => setWalletFormData({ ...walletFormData, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Ícone</Label>
+              <div className="grid grid-cols-6 gap-2">
+                {ICON_OPTIONS.map(icon => (
+                  <button
+                    key={icon}
+                    type="button"
+                    className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 transition-colors ${
+                      walletFormData.icon === icon
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                    onClick={() => setWalletFormData({ ...walletFormData, icon })}
+                  >
+                    <DynamicIcon name={icon} className="h-5 w-5" style={{ color: walletFormData.color }} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Cor</Label>
+              <div className="grid grid-cols-6 gap-2">
+                {COLOR_OPTIONS.map(color => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`h-10 w-10 rounded-lg border-2 transition-transform hover:scale-110 ${
+                      walletFormData.color === color ? 'border-white ring-2 ring-primary' : 'border-transparent'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setWalletFormData({ ...walletFormData, color })}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-muted/50 p-4">
+              <p className="mb-2 text-sm text-muted-foreground">Prévia:</p>
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex h-12 w-12 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: `${walletFormData.color}20` }}
+                >
+                  <DynamicIcon
+                    name={walletFormData.icon}
+                    className="h-6 w-6"
+                    style={{ color: walletFormData.color }}
+                  />
+                </div>
+                <span className="font-semibold">{walletFormData.name || 'Nome da Carteira'}</span>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full">
+              {editingWallet ? 'Salvar Alterações' : 'Criar Carteira'}
             </Button>
           </form>
         </DialogContent>
