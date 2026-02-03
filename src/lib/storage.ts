@@ -200,6 +200,13 @@ export function saveWallets(wallets: Wallet[]): void {
   setItem(STORAGE_KEYS.WALLETS, wallets);
 }
 
+export function addWallet(wallet: Wallet): Wallet[] {
+  const wallets = getWallets();
+  wallets.push(wallet);
+  saveWallets(wallets);
+  return wallets;
+}
+
 export function updateWallet(id: string, updates: Partial<Wallet>): Wallet[] {
   const wallets = getWallets();
   const index = wallets.findIndex(w => w.id === id);
@@ -207,6 +214,12 @@ export function updateWallet(id: string, updates: Partial<Wallet>): Wallet[] {
     wallets[index] = { ...wallets[index], ...updates };
     saveWallets(wallets);
   }
+  return wallets;
+}
+
+export function deleteWallet(id: string): Wallet[] {
+  const wallets = getWallets().filter(w => w.id !== id);
+  saveWallets(wallets);
   return wallets;
 }
 
