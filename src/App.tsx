@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,10 +16,16 @@ import Settings from "./pages/Settings";
 import AnnualSummary from "./pages/AnnualSummary";
 import IncomeDistribution from "./pages/IncomeDistribution";
 import NotFound from "./pages/NotFound";
+import { initializeAdMob } from "@/lib/admob";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  useEffect(() => {
+    initializeAdMob();
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <FinanceProvider>
@@ -43,6 +50,7 @@ const App = () => (
       </FinanceProvider>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
