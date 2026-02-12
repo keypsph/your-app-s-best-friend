@@ -55,8 +55,8 @@ export function TransactionItem({ transaction, category, onEdit }: TransactionIt
         </p>
       </div>
       
-      {/* Actions (visible on hover) */}
-      <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      {/* Actions (always visible) */}
+      <div className="flex shrink-0 gap-1">
         {onEdit && (
           <Button
             variant="ghost"

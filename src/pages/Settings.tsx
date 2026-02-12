@@ -22,19 +22,30 @@ export default function Settings() {
   const [displayName, setDisplayName] = useState(settings.displayName);
 
   const handleExport = () => {
-    const data = exportAllData();
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `slx-finance-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: 'Backup exportado',
-      description: 'Seus dados foram salvos com sucesso!',
-    });
+    try {
+      const data = exportAllData();
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `slx-finance-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: 'Backup exportado',
+        description: 'Seus dados foram salvos com sucesso!',
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: 'Erro ao exportar',
+        description: 'Não foi possível exportar o backup.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
