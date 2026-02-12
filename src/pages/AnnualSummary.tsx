@@ -120,7 +120,7 @@ export default function AnnualSummary() {
             variant="outline"
             size="icon"
             onClick={() => setSelectedYear(y => y + 1)}
-            disabled={selectedYear >= getYear(new Date())}
+            disabled={false}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>

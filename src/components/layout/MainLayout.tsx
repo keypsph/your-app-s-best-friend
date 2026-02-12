@@ -61,7 +61,7 @@ export function MainLayout() {
       {/* Mobile Header & Content */}
       <div className="flex flex-1 flex-col">
         {/* Mobile Header */}
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-lg lg:hidden">
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-lg lg:hidden">
           <div className="flex items-center gap-2">
             <PrivacyToggle />
             <h1 className="gradient-text text-xl font-bold">SLX Finance</h1>
